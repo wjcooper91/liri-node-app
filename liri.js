@@ -1,205 +1,80 @@
-/*
-*	Load Required Node Modules
-*/
-
-var Twitter = require('twitter');
+var twitter = require('twitter');
 var spotify = require('node-spotify-api')
 var request = require('request');
-var fs = require('fs');
 
-/*
-*	Load the user Twitter keys
-*/
-
+//twitter keys
 var keys = require('./keys.js');
-var twitterKeys = keys.twitterKeys;
+var twitterkeys = keys.twitterKeys;
 
-/*
-* 	Read in command line arguments
-*/
-
-// Read in the command line arguments
+//command line
 var cmdArgs = process.argv;
-
-// The LIRI command will always be the second command line argument
 var liriCommand = cmdArgs[2];
 
-// The parameter to the LIRI command may contain spaces
+//allows spaces
 var liriArg = '';
 for (var i = 3; i < cmdArgs.length; i++) {
-	liriArg += cmdArgs[i] + ' ';
+    liriArg += cmdArgs[i] + ' ';
 }
 
-// retrieveTweets will retrieve my last 10 tweets and display them together with the date
-function retrieveTweets() {
-	// Append the command to the log file
-	fs.appendFile('./log.txt', 'User Command: node liri.js tweets\n\n', (err) => {
-		if (err) throw err;
-	});
+function getTweets() {
 
-	// Initialize the Twitter client
-	var client = new Twitter(twitterKeys);
+    var client = new twitter(twitterkeys);
 
-	// Set the 'screen_name' to my Twitter handle
-	var params = {screen_name: '_wjcoop27', count: 10};
+    //screen name
+    var params = {screen_name: "wjcoop27", count: 10};
 
-	// Retrieve the last 20 tweets
-	client.get('statuses/user_timeline', params, function(error, tweets, response) {
-		if (error) {
-			var errorStr = 'ERROR: Retrieving user tweets -- ' + error;
+    //Get last 10 tweets
+    client.get('statuses/user_timeline', params, function(error, tweets, response) {
+        if (error) {
+            var errorMess = 'This did not work. ERROR: ' + error;
+            
+            fs.appendFile('/Users/williamcooper/workspace/homework/08/liri-node-app/log.txt', errorMess, (err) => {
+                if (err) throw err;
+            console.log(errorMess);
+        });
+        return;
+        } else {
+            var outputTweets = '-------\n' + 'Your Tweets:\n' + '-------\n\n';
 
-			// Append the error string to the log file
-			fs.appendFile('./log.txt', errorStr, (err) => {
-				if (err) throw err;
-				console.log(errorStr);
-			});
-			return;
-		} else {
-			var outputStr = '------------------------\n' +
-							'User Tweets:\n' + 
-							'------------------------\n\n';
+            for (var i = 0; i<tweets.length; i++) {
+                outputTweets += 
+                'Tweeted on: ' + tweets[i].created_at + '\n' + 
+                'Content: ' + tweets[i].text + '\n' +
+                '-------\n'
+            }
 
-			for (var i = 0; i < tweets.length; i++) {
-				outputStr += 'Created on: ' + tweets[i].created_at + '\n' + 
-							 'Tweet content: ' + tweets[i].text + '\n' +
-							 '------------------------\n';
-			}
+            //Append tweets to log file
+            fs.appendFile('/Users/williamcooper/workspace/homework/08/liri-node-app/log.txt', outputTweets + '\n', (err) => {
+                if (err) throw err;
+                console.log(outputTweets);
+            });
+        }
+        
+    });
 
-			// Append the output to the log file
-			fs.appendFile('./log.txt', 'LIRI Response:\n\n' + outputStr + '\n', (err) => {
-				if (err) throw err;
-				console.log(outputStr);
-			});
-		}
-	});
 }
 
-// spotifySong will retrieve information on a song from Spotify
-function spotifySong(song) {
-	// Append the command to the log file
-	fs.appendFile('./log.txt', 'User Command: node LIRI.js spotify-this-song ' + song + '\n\n', (err) => {
-		if (err) throw err;
-	});
+function getSpotify() {
+    var spotify = new Spotify({
+        id: '1ec1606d0ccc46c99bf8138ba507074c',
+        secret: '5c36fb68a30f47fab907e79f2e2eeb2b',
+      });
+       
+      spotify.search({ type: 'track', query: 'All the Small Things' }, function(err, data) {
+        if (err) {
+          return console.log('Error occurred: ' + err);
+        }
+       
+      console.log(data); 
+      });
 
-	// If no song is provided, LIRI defaults to 'The Sign' by Ace Of Base
-	var search;
-	if (song === '') {
-		search = 'The Sign Ace Of Base';
-	} else {
-		search = song;
-	}
-
-	spotify.search({ type: 'track', query: search}, function(error, data) {
-	    if (error) {
-			var errorStr1 = 'ERROR: Retrieving Spotify track -- ' + error;
-
-			// Append the error string to the log file
-			fs.appendFile('./log.txt', errorStr1, (err) => {
-				if (err) throw err;
-				console.log(errorStr1);
-			});
-			return;
-	    } else {
-			var songInfo = data.tracks.items[0];
-			if (!songInfo) {
-				var errorStr2 = 'ERROR: No song info retrieved, please check the spelling of the song name!';
-
-				// Append the error string to the log file
-				fs.appendFile('./log.txt', errorStr2, (err) => {
-					if (err) throw err;
-					console.log(errorStr2);
-				});
-				return;
-			} else {
-				// Pretty print the song information
-				var outputStr = '------------------------\n' + 
-								'Song Information:\n' + 
-								'------------------------\n\n' + 
-								'Song Name: ' + songInfo.name + '\n'+ 
-								'Artist: ' + songInfo.artists[0].name + '\n' + 
-								'Album: ' + songInfo.album.name + '\n' + 
-								'Preview Here: ' + songInfo.preview_url + '\n';
-
-				// Append the output to the log file
-				fs.appendFile('./log.txt', 'LIRI Response:\n\n' + outputStr + '\n', (err) => {
-					if (err) throw err;
-					console.log(outputStr);
-				});
-			}
-	    }
-	});
 }
+getSpotify();
 
-// retrieveOMDBInfo will retrieve information on a movie from the OMDB database
-function retrieveOBDBInfo(movie) {
-	// Append the command to the log file
-	fs.appendFile('./log.txt', 'User Command: node liri.js movie-this ' + movie + '\n\n', (err) => {
-		if (err) throw err;
-	});
 
-	// If no movie is provided, LIRI defaults to 'Mr. Nobody'
-	var search;
-	if (movie === '') {
-		search = 'Mr. Nobody';
-	} else {
-		search = movie;
-	}
+var fs = require('fs');
 
-	// Replace spaces with '+' for the query string
-	search = search.split(' ').join('+');
-
-	// Construct the query string
-	var queryStr = 'http://www.omdbapi.com/?t=' + search + '&plot=full&tomatoes=true';
-
-	// Send the request to OMDB
-	request(queryStr, function (error, response, body) {
-		if ( error || (response.statusCode !== 200) ) {
-			var errorStr1 = 'ERROR: Retrieving OMDB entry -- ' + error;
-
-			// Append the error string to the log file
-			fs.appendFile('./log.txt', errorStr1, (err) => {
-				if (err) throw err;
-				console.log(errorStr1);
-			});
-			return;
-		} else {
-			var data = JSON.parse(body);
-			if (!data.Title && !data.Released && !data.imdbRating) {
-				var errorStr2 = 'ERROR: No movie info retrieved, please check the spelling of the movie name!';
-
-				// Append the error string to the log file
-				fs.appendFile('./log.txt', errorStr2, (err) => {
-					if (err) throw err;
-					console.log(errorStr2);
-				});
-				return;
-			} else {
-		    	// Pretty print the movie information
-		    	var outputStr = '------------------------\n' + 
-								'Movie Information:\n' + 
-								'------------------------\n\n' +
-								'Movie Title: ' + data.Title + '\n' + 
-								'Year Released: ' + data.Released + '\n' +
-								'IMBD Rating: ' + data.imdbRating + '\n' +
-								'Country Produced: ' + data.Country + '\n' +
-								'Language: ' + data.Language + '\n' +
-								'Plot: ' + data.Plot + '\n' +
-								'Actors: ' + data.Actors + '\n' + 
-								'Rotten Tomatoes Rating: ' + data.tomatoRating + '\n' +
-								'Rotten Tomatoes URL: ' + data.tomatoURL + '\n';
-
-				// Append the output to the log file
-				fs.appendFile('./log.txt', 'LIRI Response:\n\n' + outputStr + '\n', (err) => {
-					if (err) throw err;
-					console.log(outputStr);
-				});
-			}
-		}
-	});
-}
-
-// doAsYerTold will read in a file to determine the desired command and then execute
-function doAsYerTold() {
+function takeCommands() {
 	// Append the command to the log file
 	fs.appendFile('./log.txt', 'User Command: node liri.js do-what-it-says\n\n', (err) => {
 		if (err) throw err;
@@ -217,12 +92,12 @@ function doAsYerTold() {
 			var param = cmdString[1].trim();
 
 			switch(command) {
-				case 'my-tweets':
-					retrieveTweets(); 
+				case 'tweets':
+					getTweets(); 
 					break;
 
-				case 'spotify-this-song':
-					spotifySong(param);
+				case 'spotify':
+					getSpotify(param);
 					break;
 
 				case 'movie-this':
@@ -233,36 +108,22 @@ function doAsYerTold() {
 	});
 }
 
-// Determine which LIRI command is being requested by the user
-if (liriCommand === 'my-tweets') {
-	retrieveTweets(); 
 
-} else if (liriCommand === `spotify-this-song`) {
-	spotifySong(liriArg);
+if (liriCommand === 'tweets') {
+    getTweets();
 
-} else if (liriCommand === `movie-this`) {
-	retrieveOBDBInfo(liriArg);
+} else if (liriCommand === 'spotify') {
+    getSpotify();
 
-} else if (liriCommand ===  `do-what-it-says`) {
-	doAsYerTold();
+}else if (liriCommand ===  `Take Commands`) {
+	takeCommands();
 
 } else {
-	// Append the command to the log file
-	fs.appendFile('./log.txt', 'User Command: ' + cmdArgs + '\n\n', (err) => {
-		if (err) throw err;
-
 		// If the user types in a command that LIRI does not recognize, output the Usage menu 
 		// which lists the available commands.
-		outputStr = 'Usage:\n' + 
-				   '    node liri.js my-tweets\n' + 
-				   '    node liri.js spotify-this-song "<song_name>"\n' + 
-				   '    node liri.js movie-this "<movie_name>"\n' + 
-				   '    node liri.js do-what-it-says\n';
-
-		// Append the output to the log file
-		fs.appendFile('./log.txt', 'LIRI Response:\n\n' + outputStr + '\n', (err) => {
-			if (err) throw err;
-			console.log(outputStr);
-		});
-	});
+		output = 'LIRI: Please input one of the following options:\n' + 
+                   '    node liri.js tweets\n' +
+                   '    node liri.js spotify "song title" \n'
+console.log(output);
 }
+
